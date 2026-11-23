@@ -1,0 +1,6 @@
+{
+  "name": "Heart Shayri",
+  "description": "All-in-one Hindi/Urdu Shayari reader, Name Shayari generator, and HD Photo Status Maker with auto-designed neon cards.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

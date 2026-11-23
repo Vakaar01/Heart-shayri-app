@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">Heart Shayri</string>
+
+    <!-- Live Google AdMob IDs -->
+    <string name="admob_app_id">ca-app-pub-2811465243306393~7654495162</string>
+    <string name="admob_banner_id">ca-app-pub-2811465243306393/8027185207</string>
+    <string name="admob_interstitial_id">ca-app-pub-2811465243306393/3513225125</string>
+</resources>

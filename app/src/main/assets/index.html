@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#000000" />
+  <title>Heart Shayri - Hindi & Urdu Shayari & Photo Status Maker</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- Maintenance Overlay (shown only if remote JSON maintenance_mode === true) -->
+  <div id="maintenanceOverlay" class="maintenance-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="maintenanceTitle">
+    <div class="maintenance-card">
+      <div class="maintenance-icon">🛠️</div>
+      <h2 id="maintenanceTitle">Updating Shayari Collection</h2>
+      <p>Heart Shayri is getting fresh shayaris and status designs right now. Please check back in a few minutes.</p>
+      <button id="retryConfigBtn" class="btn-neon-primary" type="button">Try Again</button>
+    </div>
+  </div>
+
+  <!-- Sticky Top Header -->
+  <header class="app-header">
+    <div class="header-top-row">
+      <div class="brand-group">
+        <div class="brand-logo" aria-hidden="true">
+          <svg viewBox="0 0 36 36" width="28" height="28" fill="none">
+            <defs>
+              <linearGradient id="heartGrad" x1="0" y1="0" x2="36" y2="36" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stop-color="#FF007F" />
+                <stop offset="100%" stop-color="#00F5D4" />
+              </linearGradient>
+            </defs>
+            <path d="M18 31.2C18 31.2 4.5 22.8 4.5 12.6C4.5 8.4 7.8 5.2 11.8 5.2C14.3 5.2 16.6 6.5 18 8.6C19.4 6.5 21.7 5.2 24.2 5.2C28.2 5.2 31.5 8.4 31.5 12.6C31.5 22.8 18 31.2 18 31.2Z" stroke="url(#heartGrad)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M18 12.5L21 17.5L18 22.5L15 17.5L18 12.5Z" fill="#00F5D4"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h1 class="app-title">Heart Shayri</h1>
+          <span id="syncBadge" class="sync-badge">Offline Ready</span>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <div id="liveCounter" class="live-counter" aria-live="polite">1 / 24</div>
+        <button id="jumpModalBtn" class="icon-pill-btn" type="button" title="Search & Jump" aria-label="Search Shayari or Jump to Number">
+          <span>🔍</span>
+        </button>
+        <button id="headerRandomBtn" class="icon-pill-btn accent-cyan" type="button" title="Random Shayari" aria-label="Random Shuffle">
+          <span>🎲</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Auto-Generated Category Filter Pills -->
+    <nav id="categoryBar" class="category-bar" aria-label="Shayari Categories"></nav>
+  </header>
+
+  <!-- Main Viewport -->
+  <main class="app-main">
+    <!-- TAB 1: HOME (Strict Single-Card Focus Mode) -->
+    <section id="tab-home" class="tab-panel active" aria-label="Home Single Card View">
+      <div class="single-card-stage">
+        <!-- Shayari Search Engine & Number Jump Bar -->
+        <div class="search-engine-box" role="search" aria-label="Shayari Search Engine">
+          <div class="search-bar-row">
+            <span class="search-ico" aria-hidden="true">🔍</span>
+            <input
+              id="homeSearchInput"
+              class="search-engine-input"
+              type="search"
+              placeholder="Search Shayari keyword (dil, dard) or #number..."
+              autocomplete="off"
+              aria-label="Search Shayari by keyword or number"
+            />
+            <button id="clearSearchBtn" class="search-clear-btn hidden" type="button" aria-label="Clear search">✕</button>
+            <button id="homeSearchGoBtn" class="search-go-btn" type="button">Search</button>
+          </div>
+
+          <div id="trendingKeywords" class="trending-keywords" aria-label="Popular Search Keywords">
+            <span class="trending-label">Try:</span>
+            <button class="kw-chip" data-kw="dil" type="button">dil ❤️</button>
+            <button class="kw-chip" data-kw="dard" type="button">dard 💔</button>
+            <button class="kw-chip" data-kw="mohabbat" type="button">mohabbat 🌹</button>
+            <button class="kw-chip" data-kw="attitude" type="button">attitude 🔥</button>
+            <button class="kw-chip" data-kw="yaar" type="button">yaar 🤝</button>
+            <button class="kw-chip" data-kw="bewafa" type="button">bewafa 🥀</button>
+            <button class="kw-chip" data-kw="waqt" type="button">waqt ⚡</button>
+          </div>
+
+          <div id="searchStatusBanner" class="search-status-banner hidden">
+            <span id="searchStatusText"></span>
+            <button id="resetSearchBannerBtn" class="search-reset-link" type="button">Show All</button>
+          </div>
+        </div>
+
+        <div id="cardViewport" class="card-viewport">
+          <!-- Single active shayari card rendered dynamically by JS -->
+        </div>
+
+        <div class="swipe-hint" aria-hidden="true">
+          <span>← Swipe Left / Right →</span>
+        </div>
+
+        <!-- Card Navigation Controls -->
+        <div class="deck-controls">
+          <button id="prevBtn" class="deck-btn" type="button" aria-label="Previous Shayari">
+            <span aria-hidden="true">⬅️</span>
+            <span>Previous</span>
+          </button>
+          <button id="randomBtn" class="deck-btn deck-btn-random" type="button" aria-label="Random Shayari">
+            <span aria-hidden="true">🎲</span>
+            <span>Random</span>
+          </button>
+          <button id="nextBtn" class="deck-btn" type="button" aria-label="Next Shayari">
+            <span>Next</span>
+            <span aria-hidden="true">➡️</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: NAME SHAYARI GENERATOR -->
+    <section id="tab-name" class="tab-panel" aria-label="Name Shayari Generator">
+      <div class="section-container">
+        <div class="glass-panel">
+          <h2 class="panel-heading">Name Shayari Studio</h2>
+          <p class="panel-sub">Enter any name and choose a mood to craft 12 personalized auto-designed shayaris.</p>
+
+          <div class="name-input-row">
+            <label for="nameInput" class="sr-only">Enter Name</label>
+            <input
+              id="nameInput"
+              class="neon-input"
+              type="text"
+              maxlength="24"
+              placeholder="Enter Name (e.g. Aarav, Priya)..."
+              autocomplete="off"
+            />
+            <button id="generateNameBtn" class="btn-neon-primary" type="button">Generate ✨</button>
+          </div>
+
+          <div id="nameMoodPills" class="mood-selector" role="radiogroup" aria-label="Select Mood">
+            <button class="mood-chip active" data-mood="Love" type="button">Love ❤️</button>
+            <button class="mood-chip" data-mood="Dosti" type="button">Dosti 🤝</button>
+            <button class="mood-chip" data-mood="Attitude" type="button">Attitude 🔥</button>
+            <button class="mood-chip" data-mood="Birthday" type="button">Birthday 🎂</button>
+          </div>
+        </div>
+
+        <div id="nameResultsList" class="name-results-list"></div>
+      </div>
+    </section>
+
+    <!-- TAB 3: PHOTO / STATUS MAKER (HTML5 CANVAS) -->
+    <section id="tab-maker" class="tab-panel" aria-label="Shayari Photo Status Maker">
+      <div class="section-container maker-layout">
+        <div class="maker-top-bar">
+          <div class="aspect-toggle" role="group" aria-label="Canvas Aspect Ratio">
+            <button id="aspectSquareBtn" class="aspect-btn active" data-aspect="1:1" type="button">1:1 Post</button>
+            <button id="aspectStoryBtn" class="aspect-btn" data-aspect="9:16" type="button">9:16 Status</button>
+          </div>
+          <label class="upload-gallery-btn" for="galleryUploadInput">
+            <span>🖼️ Gallery BG</span>
+            <input id="galleryUploadInput" type="file" accept="image/*" hidden />
+          </label>
+          <button id="clearBgImageBtn" class="icon-pill-btn hidden" type="button" title="Reset to Gradient">✕</button>
+        </div>
+
+        <!-- Live Canvas Preview -->
+        <div class="canvas-stage">
+          <canvas id="statusCanvas" width="1080" height="1080" aria-label="Shayari Status Preview"></canvas>
+        </div>
+
+        <!-- Download & Share Actions -->
+        <div class="maker-export-row">
+          <button id="downloadStatusBtn" class="btn-neon-cyan" type="button">
+            <span>⬇️ Download HD Status</span>
+          </button>
+          <button id="shareStatusBtn" class="btn-neon-pink" type="button">
+            <span>📤 Share Status</span>
+          </button>
+        </div>
+
+        <!-- Customization Controls -->
+        <div class="glass-panel maker-controls">
+          <div class="control-group">
+            <label class="control-label" for="makerTextInput">Shayari Text</label>
+            <textarea id="makerTextInput" class="neon-textarea" rows="3" placeholder="Type or edit your shayari here..."></textarea>
+          </div>
+
+          <div class="control-group">
+            <span class="control-label">12 Auto-Neon Backgrounds</span>
+            <div id="presetBgGrid" class="preset-bg-grid"></div>
+          </div>
+
+          <div class="control-grid-two">
+            <div class="control-group">
+              <label class="control-label" for="overlaySlider">Dark Overlay: <strong id="overlayVal">45%</strong></label>
+              <input id="overlaySlider" class="neon-slider" type="range" min="0" max="85" value="45" />
+            </div>
+            <div class="control-group">
+              <label class="control-label" for="fontSizeSlider">Font Size: <strong id="fontSizeVal">Auto</strong></label>
+              <input id="fontSizeSlider" class="neon-slider" type="range" min="28" max="68" value="44" />
+            </div>
+          </div>
+
+          <div class="control-grid-two">
+            <div class="control-group">
+              <label class="control-label" for="fontStyleSelect">Font Style</label>
+              <select id="fontStyleSelect" class="neon-select">
+                <option value="modern">Modern Bold</option>
+                <option value="classic">Classic Serif</option>
+                <option value="calligraphy">Poetic Italic</option>
+                <option value="clean">Minimal Sans</option>
+              </select>
+            </div>
+            <div class="control-group">
+              <span class="control-label">Text Color</span>
+              <div id="textColorSwatches" class="color-swatches">
+                <button class="color-dot active" data-color="#FFFFFF" style="background:#FFFFFF" type="button" aria-label="White"></button>
+                <button class="color-dot" data-color="#00F5D4" style="background:#00F5D4" type="button" aria-label="Neon Cyan"></button>
+                <button class="color-dot" data-color="#FF4DA6" style="background:#FF4DA6" type="button" aria-label="Neon Pink"></button>
+                <button class="color-dot" data-color="#FFD166" style="background:#FFD166" type="button" aria-label="Warm Gold"></button>
+                <button class="color-dot" data-color="#C7B8FF" style="background:#C7B8FF" type="button" aria-label="Soft Lavender"></button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 4: FAVORITES -->
+    <section id="tab-favorites" class="tab-panel" aria-label="Favorite Shayaris">
+      <div class="section-container">
+        <div class="favorites-header">
+          <div>
+            <h2 class="panel-heading">Saved Favorites</h2>
+            <p id="favoritesCountSub" class="panel-sub">0 shayaris saved</p>
+          </div>
+          <button id="clearFavoritesBtn" class="btn-outline-danger hidden" type="button">Clear All</button>
+        </div>
+
+        <div id="favoritesList" class="favorites-list"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Jump to Number Modal -->
+  <div id="jumpModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="jumpModalTitle">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="jumpModalTitle">🔍 Search &amp; Jump Shayari</h3>
+        <button id="closeJumpModalBtn" class="icon-close-btn" type="button" aria-label="Close">✕</button>
+      </div>
+      <p id="jumpRangeHint" class="modal-sub">Type a keyword (e.g. dil, dard) or number (1–24)</p>
+      <div class="modal-input-row">
+        <input id="jumpNumberInput" class="neon-input" type="text" placeholder="e.g. mohabbat or #12" autocomplete="off" />
+        <button id="confirmJumpBtn" class="btn-neon-primary" type="button">Go</button>
+      </div>
+      <div class="modal-quick-actions">
+        <button id="jumpFirstBtn" class="btn-chip" type="button">First (#1)</button>
+        <button id="jumpRandomBtn" class="btn-chip" type="button">Random 🎲</button>
+        <button id="jumpLastBtn" class="btn-chip" type="button">Latest</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Fixed Bottom Navigation Bar (4 Tabs) -->
+  <nav class="bottom-nav" aria-label="Main Navigation">
+    <button class="nav-item active" data-tab="home" type="button">
+      <span class="nav-icon" aria-hidden="true">🏠</span>
+      <span class="nav-label">Home</span>
+    </button>
+    <button class="nav-item" data-tab="name" type="button">
+      <span class="nav-icon" aria-hidden="true">✍️</span>
+      <span class="nav-label">Name Shayari</span>
+    </button>
+    <button class="nav-item" data-tab="maker" type="button">
+      <span class="nav-icon" aria-hidden="true">🎨</span>
+      <span class="nav-label">Photo Maker</span>
+    </button>
+    <button class="nav-item" data-tab="favorites" type="button">
+      <span class="nav-icon" aria-hidden="true">❤️</span>
+      <span class="nav-label">Favorites</span>
+      <span id="favNavBadge" class="nav-badge hidden">0</span>
+    </button>
+  </nav>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="script.js"></script>
+</body>
+</html>
