@@ -1,6 +1,7 @@
 package com.example
 
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.ContentValues
@@ -16,13 +17,13 @@ import android.util.Base64
 import android.util.Log
 import android.view.ViewGroup
 import android.webkit.JavascriptInterface
+import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import android.webkit.ValueCallback
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
@@ -34,10 +35,13 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -45,6 +49,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -53,20 +58,29 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.FileProvider
 import androidx.webkit.WebViewAssetLoader
 import com.example.ui.theme.HeartShayriTheme
+import com.startapp.sdk.ads.banner.Banner
+import com.startapp.sdk.ads.banner.BannerListener
+import com.startapp.sdk.adsbase.Ad
+import com.startapp.sdk.adsbase.StartAppAd
+import com.startapp.sdk.adsbase.StartAppSDK
+import com.startapp.sdk.adsbase.adlisteners.AdDisplayListener
+import com.startapp.sdk.adsbase.adlisteners.AdEventListener
 import java.io.File
 import java.io.FileOutputStream
 
-import android.app.Activity
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
-
 class MainActivity : ComponentActivity() {
 
-  private lateinit var adMobManager: AdMobManager
+  private lateinit var startAppAd: StartAppAd
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
-    adMobManager = AdMobManager(applicationContext).apply { initialize() }
+
+    // Initialize Start.io SDK 5.0.2 with live App ID before setContent (splash ads disabled by default)
+    startAppAd = StartAppAd(this)
+    StartAppSDK.initParams(this, getString(R.string.startio_app_id))
+      .setReturnAdsEnabled(true)
+      .setCallback { preloadInterstitial() }
+      .init()
 
     enableEdgeToEdge(
       statusBarStyle = SystemBarStyle.dark(AndroidColor.BLACK),
@@ -93,15 +107,91 @@ class MainActivity : ComponentActivity() {
             ) {
               HeartShayriWebView(
                 activity = this@MainActivity,
-                adMobManager = adMobManager,
+                onShowInterstitial = { showStartIoInterstitial() },
                 onExitApp = { finish() },
               )
             }
-            AdMobBannerBar(modifier = Modifier.fillMaxWidth())
+            StartIoBannerBar(modifier = Modifier.fillMaxWidth())
           }
         }
       }
     }
+  }
+
+  private fun preloadInterstitial() {
+    if (isFinishing || isDestroyed) return
+    if (startAppAd.state == Ad.AdState.PROCESSING || startAppAd.state == Ad.AdState.READY) return
+    startAppAd.loadAd(object : AdEventListener {
+      override fun onReceiveAd(ad: Ad) {
+        Log.d("HeartShayri", "Start.io interstitial loaded")
+      }
+
+      override fun onFailedToReceiveAd(ad: Ad?) {
+        Log.w("HeartShayri", "Start.io interstitial failed to load: ${ad?.errorMessage}")
+      }
+    })
+  }
+
+  private fun showStartIoInterstitial() {
+    if (isFinishing || isDestroyed) return
+    if (::startAppAd.isInitialized && startAppAd.state == Ad.AdState.READY) {
+      startAppAd.showAd(object : AdDisplayListener {
+        override fun adHidden(ad: Ad?) {
+          preloadInterstitial()
+        }
+
+        override fun adDisplayed(ad: Ad?) {}
+
+        override fun adClicked(ad: Ad?) {}
+
+        override fun adNotDisplayed(ad: Ad?) {
+          preloadInterstitial()
+        }
+      })
+    } else if (::startAppAd.isInitialized) {
+      preloadInterstitial()
+    }
+  }
+}
+
+@Composable
+fun StartIoBannerBar(modifier: Modifier = Modifier) {
+  Box(
+    modifier = modifier
+      .fillMaxWidth()
+      .wrapContentHeight()
+      .background(Color.Black)
+      .testTag("startio_banner_container"),
+    contentAlignment = Alignment.Center,
+  ) {
+    AndroidView(
+      modifier = Modifier
+        .fillMaxWidth()
+        .wrapContentHeight(),
+      factory = { ctx ->
+        Banner(ctx).apply {
+          layoutParams = ViewGroup.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+          )
+          setBannerListener(object : BannerListener {
+            override fun onReceiveAd(banner: android.view.View?) {
+              Log.d("HeartShayri", "Start.io banner loaded")
+            }
+
+            override fun onFailedToReceiveAd(banner: android.view.View?) {
+              Log.w("HeartShayri", "Start.io banner failed to load")
+            }
+
+            override fun onImpression(banner: android.view.View?) {}
+
+            override fun onClick(banner: android.view.View?) {}
+          })
+          showBanner()
+          loadAd()
+        }
+      },
+    )
   }
 }
 
@@ -109,7 +199,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun HeartShayriWebView(
   activity: Activity,
-  adMobManager: AdMobManager,
+  onShowInterstitial: () -> Unit,
   onExitApp: () -> Unit,
 ) {
   val context = LocalContext.current
@@ -176,7 +266,6 @@ fun HeartShayriWebView(
         settings.apply {
           javaScriptEnabled = true
           domStorageEnabled = true
-          databaseEnabled = true
           allowFileAccess = false
           allowContentAccess = true
           mediaPlaybackRequiresUserGesture = false
@@ -186,7 +275,7 @@ fun HeartShayriWebView(
         }
 
         addJavascriptInterface(
-          HeartShayriBridge(activity, adMobManager),
+          HeartShayriBridge(activity, onShowInterstitial),
           "AndroidBridge",
         )
 
@@ -247,7 +336,7 @@ private fun openExternalUri(context: Context, url: String) {
 
 class HeartShayriBridge(
   private val activity: Activity,
-  private val adMobManager: AdMobManager,
+  private val onShowInterstitial: () -> Unit,
 ) {
 
   private val context: Context = activity.applicationContext
@@ -265,7 +354,11 @@ class HeartShayriBridge(
 
   @JavascriptInterface
   fun showInterstitial() {
-    adMobManager.showInterstitial(activity)
+    activity.runOnUiThread {
+      if (!activity.isFinishing && !activity.isDestroyed) {
+        onShowInterstitial()
+      }
+    }
   }
 
   @JavascriptInterface

@@ -29,7 +29,7 @@
   const FALLBACK_CONFIG = {
     app_download_url: "https://heartshayri.github.io/app",
     maintenance_mode: false,
-    ad_interval: 7,
+    ad_interval: 5,
     shayaris: [
       "Teri ek muskaan par dil haar baithe hain hum,\nHar dua mein bas tera hi naam maang baithe hain hum,\nLog kehte hain ishq mein neend ud jaati hai,\nPar teri yaadon ke sahare har raat guzaar baithe hain hum.",
       "Mohabbat lafzon ki mohtaaj nahi hoti,\nHar dhadkan mein teri hi tasveer basee hoti hai,\nChahe jitni bhi dooriyan aa jayein darmiyaan,\nSache pyar ki khushboo kabhi kam nahi hoti.",
@@ -424,7 +424,7 @@
     toast: document.getElementById("toast")
   };
 
-  // Safe default AdMob / WebView interstitial hook
+  // Safe default Start.io / WebView interstitial hook
   if (typeof window.showAndroidInterstitial !== "function") {
     window.showAndroidInterstitial = () => {
       if (window.AndroidBridge && typeof window.AndroidBridge.showInterstitial === "function") {
